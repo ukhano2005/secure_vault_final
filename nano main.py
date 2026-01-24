@@ -11,16 +11,15 @@ import bcrypt
 from login import create_login_screen
 from dashboard import Dashboard
 from encryption import EncryptionManager
-
-# Step 1: Import CredentialManager
 from credential_management import CredentialManager
+
 
 class SecureVaultApp:
     def __init__(self):
         # ---------------- Main Window ----------------
         self.root = tk.Tk()
         self.root.title("Secure Vault - Password Manager")
-        self.root.geometry("1300x800")  # Increased size for dashboard
+        self.root.geometry("1300x800")
         self.root.configure(bg='#f8f9fa')
 
         # ---------------- Encryption ----------------
@@ -38,9 +37,10 @@ class SecureVaultApp:
         # ---------------- Credential Manager ----------------
         self.credential_manager = CredentialManager(
             root=self.root,
-            current_user=None,           # Will set after login
+            current_user=None,
             update_callback=self.update_vault_data,
-            encryption=self.encryption
+            encryption=self.encryption,
+            dashboard_callback=self.show_dashboard   # ✅ FIX ADDED
         )
 
         # ---------------- Create Sample Data ----------------
@@ -54,7 +54,6 @@ class SecureVaultApp:
 
     # ---------------- Sample Users & Vault ----------------
     def initialize_sample_data(self):
-        """Create 3 users with sample credentials"""
         if not os.path.exists(self.users_file):
             users = {
                 "john.doe": {
@@ -79,26 +78,25 @@ class SecureVaultApp:
             with open(self.users_file, "w") as f:
                 json.dump(users, f, indent=4)
 
-        # Create vault.json if not exists
         if not os.path.exists(self.vault_file):
             with open(self.vault_file, "w") as f:
                 json.dump({}, f, indent=4)
 
     # ---------------- Login Screen ----------------
     def show_login(self):
-        """Show login screen"""
         for widget in self.root.winfo_children():
             widget.destroy()
 
+        # ✅ Corrected function call to match login.py requirements
         login_frame, update_attempts, _, _ = create_login_screen(
-            self.root, 
-            self.handle_login
+            self.root,
+            self.handle_login,
+            lambda: None  # Dummy callback for registration
         )
         self.update_attempts_func = update_attempts
         login_frame.pack(expand=True, fill='both')
 
     def handle_login(self, username, password):
-        """Handle login attempt"""
         from tkinter import messagebox
 
         with open(self.users_file, "r") as f:
@@ -111,7 +109,6 @@ class SecureVaultApp:
                 self.user_data = user_data
                 self.failed_attempts = 0
 
-                # Update credential manager with current user
                 self.credential_manager.current_user = self.current_user
                 self.show_dashboard()
                 return
@@ -130,21 +127,19 @@ class SecureVaultApp:
 
     # ---------------- Dashboard ----------------
     def show_dashboard(self):
-        """Show dashboard"""
         with open(self.vault_file, "r") as f:
             vault_data = json.load(f)
 
         credentials = []
         if self.current_user in vault_data:
             for cred in vault_data[self.current_user]:
-                decrypted = {
+                credentials.append({
                     'service': self.encryption.decrypt(cred['service']),
                     'username': self.encryption.decrypt(cred['username']),
                     'password': self.encryption.decrypt(cred['password']),
                     'category': cred.get('category', 'General'),
                     'strength': cred.get('strength', 'Medium')
-                }
-                credentials.append(decrypted)
+                })
 
         self.dashboard = Dashboard(
             self.root,
@@ -153,11 +148,10 @@ class SecureVaultApp:
             credentials,
             self.handle_logout,
             self.update_vault_data,
-            self.open_credentials_manager  # Pass function to open CredentialManager
+            self.open_credentials_manager
         )
 
     def update_vault_data(self, updated_credentials):
-        """Save updated credentials to vault"""
         encrypted_creds = []
         for cred in updated_credentials:
             encrypted_creds.append({
@@ -179,7 +173,6 @@ class SecureVaultApp:
             json.dump(vault, f, indent=4)
 
     def handle_logout(self):
-        """Handle logout"""
         self.current_user = None
         self.user_data = None
         self.failed_attempts = 0
@@ -187,10 +180,8 @@ class SecureVaultApp:
 
     # ---------------- Open Credential Manager ----------------
     def open_credentials_manager(self):
-        """Open credential management screen"""
         self.credential_manager.current_user = self.current_user
 
-        # Load vault data for CredentialManager
         self.credential_manager.data["users"][self.current_user] = {"credentials": []}
         with open(self.vault_file, "r") as f:
             for cred in json.load(f).get(self.current_user, []):
@@ -206,5 +197,4 @@ class SecureVaultApp:
 
 print(">>> MAIN.PY EXECUTED <<<")
 print(">>> STARTING APPLICATION <<<")
-app = SecureVaultApp()nano
-
+app = SecureVaultApp()
