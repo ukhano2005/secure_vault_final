@@ -206,3 +206,5 @@ class SecureVaultApp:
 
 print(">>> MAIN.PY EXECUTED <<<")
 print(">>> STARTING APPLICATION <<<")
+app = SecureVaultApp()nano
+
