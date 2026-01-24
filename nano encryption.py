@@ -26,3 +26,4 @@ class EncryptionManager:
     def decrypt(self, encrypted):
         """Decrypt text"""
         return self.cipher.decrypt(encrypted.encode()).decode()
+
